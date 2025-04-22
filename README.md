@@ -19,4 +19,4 @@ Ini adalah backend dari aplikasi **Manajemen Bimbel** berbasis Django REST Frame
 
 ## Link Frontend Manajemen Bimbel
 
-- [Frontend](https://github.com/rahmanfaisal0414/manajemen_bimbel).
+- [Frontend](https://github.com/rahmanfaisal0414/manajemen-bimbel).
