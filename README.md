@@ -17,6 +17,6 @@ Ini adalah backend dari aplikasi **Manajemen Bimbel** berbasis Django REST Frame
 
 - [Desain UI Figma](https://www.figma.com/design/xJptZfx4oK4eYOSoDRPeAE/UI-UX-LMS---Gluon-IT?node-id=0-1&t=0Rk034BKqJzwQqM3-1).
 
-## Link Backend Manajemen Bimbel
+## Link Frontend Manajemen Bimbel
 
-- [Backend](https://github.com/rahmanfaisal0414/backend_bimbel).
+- [Frontend](https://github.com/rahmanfaisal0414/manajemen_bimbel).
