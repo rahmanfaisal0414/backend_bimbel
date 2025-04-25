@@ -19,5 +19,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),         # Untuk akses dashboard admin Django
-    path('api/', include('accounts.urls')),  # Semua endpoint auth diletakkan di prefix /api/
+    path('api/auth/', include('accounts.urls')),  # Semua endpoint auth diletakkan di prefix /api/
+    path('api/admin/', include('admin_panel.urls')),
 ]

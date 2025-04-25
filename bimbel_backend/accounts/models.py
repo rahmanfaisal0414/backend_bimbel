@@ -16,6 +16,7 @@ class Classes(models.Model):
     class_name = models.CharField(max_length=50)
     level = models.CharField(max_length=50, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_deleted = models.BooleanField(default=False)
 
     class Meta:
         managed = False
@@ -42,6 +43,7 @@ class Schedules(models.Model):
     start_time = models.TimeField(blank=True, null=True)
     end_time = models.TimeField(blank=True, null=True)
     schedule_date = models.DateField(blank=True, null=True)
+    
 
     class Meta:
         managed = False
@@ -73,6 +75,7 @@ class Students(models.Model):
     full_name = models.CharField(max_length=100, blank=True, null=True)
     birth_date = models.DateField(blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
+    is_deleted = models.BooleanField(default=False)
 
     class Meta:
         managed = False
@@ -93,6 +96,7 @@ class Tutors(models.Model):
     full_name = models.CharField(max_length=100, blank=True, null=True)
     subject_specialization = models.CharField(max_length=100, blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
+    is_deleted = models.BooleanField(default=False)
 
     class Meta:
         managed = False
