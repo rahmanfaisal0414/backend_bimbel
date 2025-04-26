@@ -2,6 +2,8 @@
 
 Ini adalah backend dari aplikasi **Manajemen Bimbel** berbasis Django REST Framework dan PostgreSQL. Berfungsi sebagai API utama untuk fitur login/signup berbasis token, reset password via email, dan manajemen data siswa/tutor/kelas.
 
+---
+
 ## 🧩 Fitur
 
 - 🔐 Autentikasi User (Sign Up + Login)
@@ -13,10 +15,23 @@ Ini adalah backend dari aplikasi **Manajemen Bimbel** berbasis Django REST Frame
 
 ---
 
-## Link Desain Figma Manajemen Bimbel
+## 🎨 Link Desain Figma Manajemen Bimbel
 
-- [Desain UI Figma](https://www.figma.com/design/xJptZfx4oK4eYOSoDRPeAE/UI-UX-LMS---Gluon-IT?node-id=0-1&t=0Rk034BKqJzwQqM3-1).
+- [Desain UI Figma](https://www.figma.com/design/xJptZfx4oK4eYOSoDRPeAE/UI-UX-LMS---Gluon-IT?node-id=0-1&t=0Rk034BKqJzwQqM3-1)
 
-## Link Frontend Manajemen Bimbel
+---
 
-- [Frontend](https://github.com/rahmanfaisal0414/manajemen-bimbel).
+## 🖥️ Link Frontend Manajemen Bimbel
+
+- [Frontend Repository (Next.js)](https://github.com/rahmanfaisal0414/manajemen-bimbel)
+
+---
+
+## 🚀 Cara Install & Jalankan
+
+Ikuti langkah-langkah berikut untuk setup project ini di lokal:
+
+### 1. Clone Repository
+
+```bash
+git clone https://github.com/rahmanfaisal0414/backend_bimbel.git
