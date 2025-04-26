@@ -35,3 +35,71 @@ Ikuti langkah-langkah berikut untuk setup project ini di lokal:
 
 ```bash
 git clone https://github.com/rahmanfaisal0414/backend_bimbel.git
+```
+
+### 2. Masuk ke Direktori Project
+
+```bash
+cd backend_bimbel
+```
+
+Pastikan di dalam folder ini ada file manage.py.
+
+### 3. Buat dan Aktifkan Virtual Environment
+
+```bash
+python -m venv env
+```
+
+Aktifkan virtualenv:
+
+Windows:
+
+```bash
+.\env\Scripts\activate
+```
+
+### 4. Install Dependencies
+
+Install semua library yang dibutuhkan:
+
+```bash
+pip install django djangorestframework djangorestframework-simplejwt psycopg2-binary django-cors-headers
+```
+
+(Disarankan: setelah install, buat file requirements.txt menggunakan pip freeze > requirements.txt)
+
+### 5. Setup Database PostgreSQL
+
+Project ini membutuhkan database PostgreSQL.
+
+Setting database default (di settings.py):
+
+```bash
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'bimbel_db',
+        'USER': 'postgres',
+        'PASSWORD': '123456',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
+```
+
+Pastikan database bimbel_db sudah dibuat di PostgreSQL kamu.
+
+### 6. Migrasi Database
+
+Buat struktur tabel di database:
+
+```bash
+python manage.py migrate
+```
+
+### 7. Jalankan Development Server
+
+```bash
+python manage.py runserver
+```
