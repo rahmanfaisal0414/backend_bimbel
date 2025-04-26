@@ -69,7 +69,13 @@ pip install django djangorestframework djangorestframework-simplejwt psycopg2-bi
 
 (Disarankan: setelah install, buat file requirements.txt menggunakan pip freeze > requirements.txt)
 
-### 5. Setup Database PostgreSQL
+### 5. Masuk ke Direktori Django
+
+```bash
+cd bimbel_backend
+```
+
+### 6. Setup Database PostgreSQL
 
 Project ini membutuhkan database PostgreSQL.
 
@@ -90,7 +96,7 @@ DATABASES = {
 
 Pastikan database bimbel_db sudah dibuat di PostgreSQL kamu.
 
-### 6. Migrasi Database
+### 7. Migrasi Database
 
 Buat struktur tabel di database:
 
@@ -98,7 +104,7 @@ Buat struktur tabel di database:
 python manage.py migrate
 ```
 
-### 7. Jalankan Development Server
+### 8. Jalankan Development Server
 
 ```bash
 python manage.py runserver
