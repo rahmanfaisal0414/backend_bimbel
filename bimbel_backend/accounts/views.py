@@ -8,7 +8,7 @@ from django.utils.html import strip_tags
 from datetime import datetime, timedelta
 from django.utils.timezone import is_naive, make_aware
 from django.contrib.auth.hashers import make_password, check_password
-from .models import Users, SignupTokens
+from .models import Users, SignupTokens, Tutors, Students, Classes, StudentClasses
 from .serializers import SignupSerializer, SigninSerializer, RequestResetSerializer, VerifyResetTokenSerializer, ResetPasswordSerializer
 from .utils import generate_simple_token
 from django.core.mail import send_mail, EmailMultiAlternatives
@@ -31,7 +31,10 @@ class SignupView(APIView):
             try:
                 token = SignupTokens.objects.get(token=token_str, is_used=False)
             except SignupTokens.DoesNotExist:
-                return Response({'token': 'Token tidak valid atau sudah digunakan.'}, status=status.HTTP_400_BAD_REQUEST)
+                if SignupTokens.objects.filter(token=token_str).exists():
+                    return Response({'token': 'Token sudah digunakan.'}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    return Response({'token': 'Token tidak ditemukan.'}, status=status.HTTP_400_BAD_REQUEST)
 
             # Simpan user
             hashed_password = make_password(password)
@@ -39,14 +42,55 @@ class SignupView(APIView):
                 username=username,
                 email=email,
                 password=hashed_password,
-                role=token.role
+                full_name=token.full_name,
+                role=token.role,
+                is_active=True
             )
+
+            # Simpan ke students atau tutors
+            if token.role == 'student':
+                # Generate student_id otomatis
+                last_student = Students.objects.order_by('-id').first()
+                next_id = (last_student.id + 1) if last_student else 1
+                student_id = f"S{next_id:03}"
+
+                student = Students.objects.create(
+                    user=user,
+                    student_id=student_id,
+                    full_name=token.full_name,
+                    phone=token.phone,
+                    address=token.address,
+                    gender=token.gender,
+                    birthdate=token.birthdate,
+                    parent_contact=token.parent_contact
+                )
+
+                # Tambahkan ke tabel StudentClasses jika ada class_field
+                if token.class_field:
+                    StudentClasses.objects.create(
+                        student=student,
+                        class_field=token.class_field
+                    )
+                
+                if token.role == "student":
+                    class_obj = token.class_field
+                    class_obj.current_student_count += 1
+                    class_obj.save()
+
+            elif token.role == 'tutor':
+                Tutors.objects.create(
+                    user=user,
+                    full_name=token.full_name,
+                    phone=token.phone,
+                    expertise='(isi expertise jika mau)',
+                    address=token.address
+                )
 
             # Tandai token sebagai sudah digunakan
             token.is_used = True
             token.save()
 
-            # Kirim email selamat datang (HTML)
+            # Kirim email selamat datang
             html_content = f"""
             <!DOCTYPE html>
             <html>
@@ -72,14 +116,18 @@ class SignupView(APIView):
             </body>
             </html>
             """
-            send_mail(
-                subject='🎓 Selamat Datang di Aplikasi Bimbel!',
-                message=strip_tags(html_content),
-                from_email='listarte14@gmail.com',  # atau ganti sesuai config EMAIL_HOST_USER
-                recipient_list=[email],
-                fail_silently=False,
-                html_message=html_content
-            )
+            try:
+                send_mail(
+                    subject='🎓 Selamat Datang di Aplikasi Bimbel!',
+                    message=strip_tags(html_content),
+                    from_email='listarte14@gmail.com',
+                    recipient_list=[email],
+                    fail_silently=False,
+                    html_message=html_content
+                )
+            except Exception as e:
+                user.delete()
+                return Response({'email': 'Email tidak valid atau tidak bisa dikirimi pesan'}, status=status.HTTP_400_BAD_REQUEST)
 
             return Response({'message': 'Signup berhasil', 'user_id': user.id}, status=status.HTTP_201_CREATED)
 
@@ -99,11 +147,17 @@ class SigninView(APIView):
                     user = Users.objects.get(email=identifier)
                 except Users.DoesNotExist:
                     return Response({'error': 'Username/Email tidak ditemukan'}, status=status.HTTP_404_NOT_FOUND)
+                
+            if not Users.is_active:
+                return Response({'error': 'Akun tidak aktif'}, status=status.HTTP_403_FORBIDDEN)    
 
             if check_password(password, user.password):
                 return Response({
                     'message': 'Login berhasil',
                     'user_id': user.id,
+                    'username': user.username,
+                    'full_name': user.full_name,
+                    'email': user.email,
                     'role': user.role
                 })
 
@@ -115,16 +169,51 @@ class SigninView(APIView):
 class GenerateSignupTokenView(APIView):
     def post(self, request):
         role = request.data.get('role')
+        full_name = request.data.get('full_name')
+        phone = request.data.get('phone')
+        address = request.data.get('address')
+        class_id = request.data.get('class_id')
+        gender = request.data.get('gender')
+        birthdate = request.data.get('birthdate')
+        parent_contact = request.data.get('parent_contact')
+
+
         if role not in ['student', 'tutor']:
             return Response({'error': 'Role tidak valid'}, status=status.HTTP_400_BAD_REQUEST)
+        if not full_name or not phone:
+            return Response({'error': 'Nama dan nomor telepon harus diisi'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not class_id:
+            return Response({'error': 'Class harus diisi'}, status=status.HTTP_400_BAD_REQUEST)
+        if role == "student" and not parent_contact:
+            return Response({'error': 'Kontak orang tua wajib diisi untuk siswa'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Cari token unik yang belum pernah dipakai
+        try:
+            class_instance = Classes.objects.get(id=class_id)
+        except Classes.DoesNotExist:
+            return Response({'error': 'Class tidak ditemukan'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if class_instance.current_student_count >= class_instance.capacity:
+            return Response({"error": "Class is already full."}, status=400)
+
+        # Cari token unik
         while True:
             token = generate_simple_token()
             if not SignupTokens.objects.filter(token=token).exists():
                 break
 
-        SignupTokens.objects.create(token=token, role=role, is_used=False)
+        SignupTokens.objects.create(
+            token=token,
+            role=role,
+            full_name=full_name,
+            phone=phone,
+            address=address,
+            class_field=class_instance,
+            gender=gender,
+            birthdate=birthdate,
+            parent_contact=parent_contact
+        )
+
         return Response({'token': token}, status=status.HTTP_201_CREATED)
     
 class RequestPasswordResetView(APIView):
