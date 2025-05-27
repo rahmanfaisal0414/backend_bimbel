@@ -7,6 +7,13 @@
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
 
+class AppSettings(models.Model):
+    key = models.CharField(max_length=100, primary_key=True)
+    value = models.CharField(max_length=255)
+
+    class Meta:
+        managed = False  # Karena sudah ada tabel di database, tidak dikelola oleh Django migration
+        db_table = 'app_settings'
 
 class AssignmentSubmissions(models.Model):
     assignment = models.ForeignKey('Assignments', models.DO_NOTHING, blank=True, null=True)
@@ -26,6 +33,8 @@ class Assignments(models.Model):
     tutor = models.ForeignKey('Tutors', models.DO_NOTHING, blank=True, null=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
+    file_url = models.TextField(blank=True, null=True)
+    subject = models.ForeignKey('Subjects', models.DO_NOTHING, blank=True, null=True)
     due_date = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
 
@@ -49,8 +58,7 @@ class BimbelRating(models.Model):
     tutor = models.ForeignKey('Tutors', on_delete=models.CASCADE)
     professionalism = models.FloatField()  # etika, sopan santun
     attendance = models.FloatField()       # ketepatan waktu, hadir sesuai jadwal
-    subject_mastery = models.FloatField()  # penguasaan materi
-    communication = models.FloatField()    # cara menyampaikan materi ke murid
+    subject_mastery = models.FloatField()  # penguasaan materi    # cara menyampaikan materi ke murid
     admin_notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -78,6 +86,7 @@ class Feedbacks(models.Model):
     rating = models.IntegerField(blank=True, null=True)
     comment = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_approved = models.BooleanField(default=True)
 
     class Meta:
         managed = False
@@ -90,6 +99,7 @@ class Materials(models.Model):
     title = models.CharField(max_length=255)
     file_url = models.TextField(blank=True, null=True)
     type = models.CharField(max_length=50)
+    subject = models.CharField(max_length=255, blank=True, null=True)
     is_approved = models.BooleanField(blank=True, null=True)
     uploaded_at = models.DateTimeField(blank=True, null=True)
 
@@ -111,17 +121,18 @@ class RescheduleRequests(models.Model):
 
 
 class Schedules(models.Model):
-    class_field = models.ForeignKey(Classes, models.DO_NOTHING, db_column='class_id', blank=True, null=True)  # Field renamed because it was a Python reserved word.
+    class_field = models.ForeignKey('Classes', models.DO_NOTHING, db_column='class_id', blank=True, null=True)
     tutor = models.ForeignKey('Tutors', models.DO_NOTHING, blank=True, null=True)
+    subject = models.ForeignKey('Subjects', models.DO_NOTHING, blank=True, null=True)  # ✅ Tambahkan ini
     schedule_date = models.DateField()
     start_time = models.TimeField()
     end_time = models.TimeField()
     status = models.CharField(max_length=20)
+    room = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = False  # ⛔️ Jangan ubah, karena kamu tidak pakai migrasi otomatis
         db_table = 'schedules'
-
 
 class SignupTokens(models.Model):
     token = models.CharField(unique=True, max_length=100)
@@ -134,6 +145,7 @@ class SignupTokens(models.Model):
     gender = models.CharField(max_length=10, blank=True, null=True)
     birthdate = models.DateField(blank=True, null=True)
     parent_contact = models.CharField(max_length=20, blank=True, null=True)
+    expertise = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -163,7 +175,37 @@ class Students(models.Model):
     class Meta:
         managed = False
         db_table = 'students'
+        
+class ScheduleMaterials(models.Model):
+    schedule = models.ForeignKey('Schedules', models.DO_NOTHING)
+    material = models.ForeignKey('Materials', models.DO_NOTHING)
 
+    class Meta:
+        managed = False  # karena kamu pakai database dari pgAdmin
+        db_table = 'schedule_materials'
+        
+class ScheduleAssignments(models.Model):
+    schedule = models.ForeignKey(Schedules, on_delete=models.CASCADE)
+    assignment = models.ForeignKey(Assignments, on_delete=models.CASCADE)
+
+    class Meta:
+        managed = False  
+        db_table = 'schedule_assignments'
+
+class Subjects(models.Model):
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        managed = False
+        db_table = 'subjects'
+
+class TutorExpertise(models.Model):
+    tutor = models.ForeignKey('Tutors', models.DO_NOTHING)
+    subject = models.ForeignKey('Subjects', models.DO_NOTHING)
+
+    class Meta:
+        managed = False
+        db_table = 'tutor_expertise'
 
 class TutorClasses(models.Model):
     tutor = models.ForeignKey('Tutors', models.DO_NOTHING, blank=True, null=True)
@@ -185,6 +227,15 @@ class Tutors(models.Model):
         managed = False
         db_table = 'tutors'
 
+class TutorAvailability(models.Model):
+    tutor = models.ForeignKey('Tutors', on_delete=models.CASCADE)
+    day_of_week = models.CharField(max_length=10)  # e.g., "Monday", "Tuesday"
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+
+    class Meta:
+        managed = False  # or True jika kamu ingin Django kelola migrasinya
+        db_table = 'tutor_availability'
 
 class Users(models.Model):
     username = models.CharField(unique=True, max_length=150)
@@ -192,6 +243,10 @@ class Users(models.Model):
     password = models.CharField(max_length=255)
     role = models.CharField(max_length=20)
     full_name = models.CharField(max_length=255, blank=True, null=True)
+    photo_url = models.CharField(max_length=255, blank=True, default='/media/profile/default-avatar.png')
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    bio = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(blank=True, null=True)
     date_joined = models.DateTimeField(auto_now_add=True)
     reset_token = models.CharField(max_length=6, blank=True, null=True)

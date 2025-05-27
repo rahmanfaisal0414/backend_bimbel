@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -42,6 +43,8 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'corsheaders',
     'admin_panel',
+    'tutor_panel',
+    'student_panel',
 ]
 
 MIDDLEWARE = [
@@ -152,3 +155,5 @@ EMAIL_HOST_USER = 'listarte14@gmail.com'
 EMAIL_HOST_PASSWORD = 'xocr vzco mlgd hvsu'  # bukan password biasa
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

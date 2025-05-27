@@ -3,7 +3,9 @@ from .models import (
     Users, Students, Tutors, SignupTokens, Classes,
     Schedules, Attendance, Feedbacks, Materials,
     RescheduleRequests, AssignmentSubmissions, Assignments,
-    StudentClasses, TutorClasses, BimbelRating
+    StudentClasses, TutorClasses, BimbelRating, TutorAvailability,
+    AppSettings, Subjects, TutorExpertise, ScheduleMaterials,
+    ScheduleAssignments
 )
 
 @admin.register(Users)
@@ -92,7 +94,41 @@ class TutorClassesAdmin(admin.ModelAdmin):
 class BimbelRatingAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'tutor', 'professionalism', 'attendance',
-        'subject_mastery', 'communication', 'created_at'
+        'subject_mastery', 'created_at'
     )
     search_fields = ('tutor__full_name',)
     list_filter = ('created_at',)
+    
+@admin.register(TutorAvailability)
+class TutorAvailabilityAdmin(admin.ModelAdmin):
+    list_display = ('id', 'tutor', 'day_of_week', 'start_time', 'end_time')
+    list_filter = ('day_of_week',)
+    search_fields = ('tutor__full_name',)
+    
+@admin.register(AppSettings)
+class AppSettingsAdmin(admin.ModelAdmin):
+    list_display = ('key', 'value')
+    search_fields = ('key',)
+    list_per_page = 20
+    
+@admin.register(Subjects)
+class SubjectAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')
+    search_fields = ('name',)
+
+@admin.register(TutorExpertise)
+class TutorExpertiseAdmin(admin.ModelAdmin):
+    list_display = ('id', 'tutor', 'subject')
+    search_fields = ('tutor__full_name', 'subject__name')
+    
+@admin.register(ScheduleMaterials)
+class ScheduleMaterialsAdmin(admin.ModelAdmin):
+    list_display = ('id', 'schedule', 'material')
+    search_fields = ('schedule__id', 'material__title')
+    list_filter = ('schedule',)
+    
+@admin.register(ScheduleAssignments)
+class ScheduleAssignmentsAdmin(admin.ModelAdmin):
+    list_display = ('id', 'schedule', 'assignment')
+    search_fields = ('schedule__id', 'assignment__title')
+    list_filter = ('schedule',)

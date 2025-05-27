@@ -1,18 +1,39 @@
-import uuid
 import random
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
+import uuid
+from datetime import datetime, timedelta
+
 from django.utils import timezone
 from django.utils.html import strip_tags
-from datetime import datetime, timedelta
 from django.utils.timezone import is_naive, make_aware
 from django.contrib.auth.hashers import make_password, check_password
-from .models import Users, SignupTokens, Tutors, Students, Classes, StudentClasses
-from .serializers import SignupSerializer, SigninSerializer, RequestResetSerializer, VerifyResetTokenSerializer, ResetPasswordSerializer
-from .utils import generate_simple_token
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.urls import reverse
+
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+from .models import (
+    Users,
+    SignupTokens,
+    Tutors,
+    Students,
+    Classes,
+    StudentClasses,
+    TutorExpertise,
+    Subjects,
+)
+
+from .serializers import (
+    SignupSerializer,
+    SigninSerializer,
+    RequestResetSerializer,
+    VerifyResetTokenSerializer,
+    ResetPasswordSerializer,
+)
+
+from .utils import generate_simple_token
+
 
 class SignupView(APIView):
     def post(self, request):
@@ -44,7 +65,10 @@ class SignupView(APIView):
                 password=hashed_password,
                 full_name=token.full_name,
                 role=token.role,
-                is_active=True
+                is_active=True,
+                phone=token.phone,      
+                address=token.address,
+                bio="Profil belum diperbarui."
             )
 
             # Simpan ke students atau tutors
@@ -78,13 +102,20 @@ class SignupView(APIView):
                     class_obj.save()
 
             elif token.role == 'tutor':
-                Tutors.objects.create(
+                tutor = Tutors.objects.create(
                     user=user,
                     full_name=token.full_name,
                     phone=token.phone,
-                    expertise='(isi expertise jika mau)',
                     address=token.address
                 )
+            if token.expertise:
+                subjects = [s.strip() for s in token.expertise.split(",")]
+                for name in subjects:
+                    try:
+                        subject_obj = Subjects.objects.get(name__iexact=name)
+                        TutorExpertise.objects.create(tutor=tutor, subject=subject_obj)
+                    except Subjects.DoesNotExist:
+                        continue 
 
             # Tandai token sebagai sudah digunakan
             token.is_used = True
@@ -158,7 +189,8 @@ class SigninView(APIView):
                     'username': user.username,
                     'full_name': user.full_name,
                     'email': user.email,
-                    'role': user.role
+                    'role': user.role,
+                    'photo_url': user.photo_url
                 })
 
             return Response({'error': 'Password salah'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -176,32 +208,48 @@ class GenerateSignupTokenView(APIView):
         gender = request.data.get('gender')
         birthdate = request.data.get('birthdate')
         parent_contact = request.data.get('parent_contact')
+        expertise_list = request.data.get('expertise', [])  # list of string
+        if role == 'tutor' and not expertise_list:
+            return Response({'error': 'Expertise wajib diisi'}, status=400)
 
-
+        # Validasi role
         if role not in ['student', 'tutor']:
             return Response({'error': 'Role tidak valid'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validasi wajib diisi
         if not full_name or not phone:
             return Response({'error': 'Nama dan nomor telepon harus diisi'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        if not class_id:
-            return Response({'error': 'Class harus diisi'}, status=status.HTTP_400_BAD_REQUEST)
-        if role == "student" and not parent_contact:
-            return Response({'error': 'Kontak orang tua wajib diisi untuk siswa'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            class_instance = Classes.objects.get(id=class_id)
-        except Classes.DoesNotExist:
-            return Response({'error': 'Class tidak ditemukan'}, status=status.HTTP_404_NOT_FOUND)
-        
-        if class_instance.current_student_count >= class_instance.capacity:
-            return Response({"error": "Class is already full."}, status=400)
+        class_instance = None
+        if role == "student":
+            if not class_id:
+                return Response({'error': 'Class harus diisi'}, status=status.HTTP_400_BAD_REQUEST)
+            if not parent_contact:
+                return Response({'error': 'Kontak orang tua wajib diisi untuk siswa'}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                class_instance = Classes.objects.get(id=class_id)
+            except Classes.DoesNotExist:
+                return Response({'error': 'Class tidak ditemukan'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Cari token unik
+            if class_instance.current_student_count >= class_instance.capacity:
+                return Response({"error": "Class is already full."}, status=400)
+
+        elif role == "tutor":
+            # Opsional: tutor bisa di-assign ke kelas awal atau tidak
+            if class_id:
+                try:
+                    class_instance = Classes.objects.get(id=class_id)
+                except Classes.DoesNotExist:
+                    return Response({'error': 'Class tidak ditemukan'}, status=status.HTTP_404_NOT_FOUND)
+            parent_contact = None  # Tutor tidak perlu parent contact
+
+        # Generate unique token
         while True:
             token = generate_simple_token()
             if not SignupTokens.objects.filter(token=token).exists():
                 break
 
+        # Simpan token
         SignupTokens.objects.create(
             token=token,
             role=role,
@@ -211,7 +259,8 @@ class GenerateSignupTokenView(APIView):
             class_field=class_instance,
             gender=gender,
             birthdate=birthdate,
-            parent_contact=parent_contact
+            parent_contact=parent_contact,
+            expertise=",".join(expertise_list) if role == "tutor" else None  # temporarily stringified
         )
 
         return Response({'token': token}, status=status.HTTP_201_CREATED)
